@@ -1,4 +1,4 @@
-# ✨ Perfect Chaos
+## 🌀 Perfect Chaos
 
 A generative 2D collision simulation where every ball calculates a unique path to hit moving platforms.
 
