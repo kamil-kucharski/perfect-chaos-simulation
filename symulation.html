@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Perfect Chaos</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #10100f;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: clamp(18px, 4vw, 56px);
+        overflow-x: hidden;
+        background: radial-gradient(circle at 50% -15%, #2a2419, transparent 40rem), #10100f;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        opacity: .35;
+        background: radial-gradient(ellipse at 50% 0%, rgb(230 192 117 / 12%), transparent 55%);
+      }
+
+      main { width: min(100%, 1040px); }
+
+      .app-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        align-items: center;
+        margin: 0 8px 18px;
+      }
+
+      h1 {
+        margin: 0;
+        color: #f3ecdf;
+        font-size: clamp(1.7rem, 4vw, 2.55rem);
+        line-height: 1;
+        letter-spacing: -.06em;
+      }
+
+      .live-status {
+        display: flex;
+        flex: none;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 11px;
+        border: 1px solid rgb(233 205 147 / 18%);
+        border-radius: 999px;
+        color: #e8d6aa;
+        background: rgb(39 33 23 / 64%);
+        box-shadow: inset 0 1px rgb(255 255 255 / 7%);
+        font-size: .72rem;
+        font-weight: 750;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+
+      .live-status::before {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #e0bd6b;
+        box-shadow: 0 0 0 4px rgb(224 189 107 / 12%), 0 0 14px #e0bd6b;
+        content: "";
+      }
+
+      .simulation-card {
+        overflow: hidden;
+        border: 1px solid rgb(238 220 178 / 14%);
+        background: #15130f;
+        box-shadow: 0 28px 80px rgb(0 0 0 / 45%), inset 0 1px rgb(255 255 255 / 6%);
+      }
+
+      .simulation {
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid rgb(238 220 178 / 12%);
+        background: #15130f;
+      }
+
+      .simulation::after {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(110deg, rgb(255 255 255 / 4%), transparent 26%, transparent 72%, rgb(226 189 108 / 4%));
+        content: "";
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 12 / 7;
+      }
+
+      .counter {
+        position: absolute;
+        inset: auto 18px 7px auto;
+        display: flex;
+        gap: 9px;
+        align-items: baseline;
+        padding: 8px 11px;
+        border: 1px solid rgb(238 220 178 / 13%);
+        border-radius: 0;
+        color: #eee4d1;
+        background: rgb(21 18 13 / 72%);
+        box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+        pointer-events: none;
+      }
+
+      .counter-label {
+        color: #cdbb94;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: .74rem;
+        font-style: normal;
+        font-weight: 700;
+        letter-spacing: .04em;
+      }
+
+      .counter-value {
+        color: #f3ead8;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: .78rem;
+        font-weight: 800;
+        letter-spacing: .06em;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        gap: 9px;
+        align-items: center;
+        margin-top: 0;
+        padding: 10px;
+        border: 0;
+        border-radius: 0;
+        color: #dce8ef;
+        background: rgb(23 21 17 / 72%);
+        box-shadow: inset 0 1px rgb(255 255 255 / 5%);
+        backdrop-filter: blur(14px);
+      }
+
+      button {
+        min-width: 78px;
+        border: 1px solid rgb(238 209 143 / 26%);
+        border-radius: 0;
+        padding: 10px 14px;
+        color: #211a0e;
+        background: linear-gradient(135deg, #efd796, #d6ad5b);
+        box-shadow: 0 8px 18px rgb(163 117 41 / 14%), inset 0 1px rgb(255 255 255 / 44%);
+        font: inherit;
+        font-size: .88rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform .16s ease, filter .16s ease, background .16s ease;
+      }
+
+      button:hover { filter: brightness(1.09); transform: translateY(-1px); }
+      button:active { transform: translateY(0); }
+      #reset { color: #d7cdbd; background: rgb(83 72 55 / 32%); box-shadow: inset 0 1px rgb(255 255 255 / 7%); }
+      button:focus-visible, input:focus-visible { outline: 3px solid #e0bd6b; outline-offset: 3px; }
+
+      label { justify-self: end; color: #b8ad9d; font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+      input { width: min(19vw, 150px); vertical-align: middle; accent-color: #d8af5d; }
+
+      @media (max-width: 600px) {
+        .app-header { align-items: start; flex-direction: column; gap: 14px; margin-bottom: 16px; }
+        .counter { inset: auto 12px 7px auto; }
+        .controls { grid-template-columns: 1fr 1fr; }
+        label { grid-column: 1 / -1; justify-self: stretch; display: flex; justify-content: space-between; align-items: center; }
+        input { width: 58%; }
+      }
+
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="app-header">
+        <h1>Perfect Chaos</h1>
+        <div class="live-status">Live</div>
+      </header>
+      <div class="simulation-card">
+        <section class="simulation" aria-label="Bouncing balls simulation">
+          <canvas id="world" width="960" height="560"></canvas>
+          <div class="counter"><span class="counter-label">Balls</span><span class="counter-value" id="counter">2</span></div>
+        </section>
+
+        <div class="controls">
+          <button id="pause" type="button">Pause</button>
+          <button id="reset" type="button">Reset</button>
+          <label for="speed">Speed <input id="speed" type="range" min="0.35" max="2.5" value="1" step="0.05" /></label>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      (() => {
+        const canvas = document.querySelector('#world');
+        const ctx = canvas.getContext('2d');
+        const counter = document.querySelector('#counter');
+        const pauseButton = document.querySelector('#pause');
+        const resetButton = document.querySelector('#reset');
+        const speedControl = document.querySelector('#speed');
+
+        const W = canvas.width;
+        const H = canvas.height;
+        const TOP = 74;
+        const BOTTOM = H - 48;
+        const BALL_RADIUS = 5.2;
+        const PATH_TOP = TOP + BALL_RADIUS;
+        const PATH_BOTTOM = BOTTOM - BALL_RADIUS;
+        const PATH_HEIGHT = PATH_BOTTOM - PATH_TOP;
+        const MAX_BALLS = 6000;
+        const SPLIT_DELAY = 3.15;
+        const BALL_SPEED = 360;
+        const palette = ['#e7bc67', '#ce7d82', '#91b7a2', '#739dca', '#9a83bd', '#d49363', '#b7be70'];
+
+        let balls = [];
+        let running = true;
+        let elapsed = 0;
+        let lastFrame = performance.now();
+
+        const paddles = [
+          { side: 'left', x: 76, y: 250, w: 8, h: 46, phase: 0.15, frequency: 0.82, amplitude: 150, velocity: 0 },
+          { side: 'right', x: W - 84, y: 310, w: 8, h: 46, phase: Math.PI + 0.65, frequency: 0.73, amplitude: 155, velocity: 0 },
+        ];
+
+        function randomColor() {
+          return palette[Math.floor(Math.random() * palette.length)];
+        }
+
+        function createBall(x, y, vx, vy, bornAt = elapsed) {
+          return {
+            x, y, vx, vy,
+            radius: BALL_RADIUS,
+            color: randomColor(),
+            bornAt,
+            nextSplitAt: bornAt + SPLIT_DELAY + Math.random() * 0.7,
+            aimOffset: (Math.random() - 0.5) * 26,
+            pathY: y,
+            trail: [],
+          };
+        }
+
+        function reset() {
+          elapsed = 0;
+          const middle = (TOP + BOTTOM) / 2;
+          for (const paddle of paddles) {
+            paddle.y = middle + Math.sin(paddle.phase) * paddle.amplitude;
+            paddle.velocity = 0;
+          }
+          const firstBall = createBall(W * 0.38, H * 0.43, 0, 0, -SPLIT_DELAY);
+          const secondBall = createBall(W * 0.62, H * 0.57, 0, 0, -SPLIT_DELAY);
+          balls = [firstBall, secondBall];
+          planTrajectory(firstBall, 1, 0);
+          planTrajectory(secondBall, -1, 1);
+          updateCounter();
+        }
+
+        function updatePaddles(dt) {
+          for (const paddle of paddles) {
+            const oldY = paddle.y;
+            const middle = (TOP + BOTTOM) / 2;
+            paddle.y = middle + Math.sin(elapsed * paddle.frequency + paddle.phase) * paddle.amplitude;
+            paddle.velocity = (paddle.y - oldY) / Math.max(dt, 0.001);
+          }
+        }
+
+        function clamp(value, low, high) {
+          return Math.max(low, Math.min(high, value));
+        }
+
+        function hitPaddle(ball, paddle) {
+          const nearestX = clamp(ball.x, paddle.x, paddle.x + paddle.w);
+          const nearestY = clamp(ball.y, paddle.y - paddle.h / 2, paddle.y + paddle.h / 2);
+          const dx = ball.x - nearestX;
+          const dy = ball.y - nearestY;
+          return dx * dx + dy * dy < ball.radius * ball.radius;
+        }
+
+        function paddleYAt(paddle, time) {
+          const middle = (TOP + BOTTOM) / 2;
+          return middle + Math.sin(time * paddle.frequency + paddle.phase) * paddle.amplitude;
+        }
+
+        function foldPathY(unfoldedY) {
+          const period = PATH_HEIGHT * 2;
+          const position = ((unfoldedY - PATH_TOP) % period + period) % period;
+          return position <= PATH_HEIGHT
+            ? PATH_TOP + position
+            : PATH_BOTTOM - (position - PATH_HEIGHT);
+        }
+
+        function chooseRoute(preferBounce, excludedRoute = -1) {
+          const options = preferBounce
+            ? [1, 2, 3, 4]
+            : [0, 0, 0, 1, 2, 3, 4];
+          const available = options.filter((route) => route !== excludedRoute);
+          return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function planTrajectory(ball, direction, route) {
+          const targetPaddle = direction < 0 ? paddles[0] : paddles[1];
+          const contactX = targetPaddle.side === 'left'
+            ? targetPaddle.x + targetPaddle.w + ball.radius
+            : targetPaddle.x - ball.radius;
+          const horizontalDistance = Math.abs(contactX - ball.x);
+          const safeOffset = targetPaddle.h / 2 - ball.radius - 1;
+          ball.pathY = ball.y;
+          let timeToContact = horizontalDistance / BALL_SPEED;
+          let destinationY = ball.pathY;
+
+          for (let iteration = 0; iteration < 10; iteration += 1) {
+            const targetY = clamp(
+              paddleYAt(targetPaddle, elapsed + timeToContact)
+                + clamp(ball.aimOffset, -safeOffset, safeOffset),
+              PATH_TOP,
+              PATH_BOTTOM,
+            );
+            const targetS = targetY - PATH_TOP;
+            const unfoldedTargets = [
+              targetS,
+              -targetS,
+              PATH_HEIGHT * 2 - targetS,
+              -PATH_HEIGHT * 2 + targetS,
+              PATH_HEIGHT * 2 + targetS,
+            ];
+            destinationY = PATH_TOP + unfoldedTargets[route];
+            const calculatedTime = Math.hypot(horizontalDistance, destinationY - ball.pathY) / BALL_SPEED;
+            timeToContact = timeToContact * 0.3 + calculatedTime * 0.7;
+          }
+
+          ball.vx = direction * horizontalDistance / timeToContact;
+          ball.vy = (destinationY - ball.pathY) / timeToContact;
+          ball.flightTime = timeToContact;
+          ball.route = route;
+        }
+
+        function splitBall(ball, normal, parentRoute) {
+          if (balls.length >= MAX_BALLS || elapsed < ball.nextSplitAt) return;
+
+          const child = createBall(
+            ball.x + normal * ball.radius * 2.1,
+            ball.y,
+            normal * BALL_SPEED,
+            0,
+          );
+          planTrajectory(child, normal, chooseRoute(true, parentRoute));
+          balls.push(child);
+          ball.nextSplitAt = elapsed + SPLIT_DELAY + Math.random() * 0.85;
+        }
+
+        function resolvePaddleCollision(ball, paddle) {
+          if (!hitPaddle(ball, paddle)) return;
+
+          const normal = paddle.side === 'left' ? 1 : -1;
+          ball.x = paddle.side === 'left'
+            ? paddle.x + paddle.w + ball.radius + 0.1
+            : paddle.x - ball.radius - 0.1;
+          ball.aimOffset = (Math.random() - 0.5) * 26;
+          const parentRoute = chooseRoute(false);
+          planTrajectory(ball, normal, parentRoute);
+          splitBall(ball, normal, parentRoute);
+        }
+
+        function updateBall(ball, dt) {
+          const previousX = ball.x;
+          const previousPathY = ball.pathY;
+          ball.x += ball.vx * dt;
+          ball.pathY += ball.vy * dt;
+          ball.y = foldPathY(ball.pathY);
+
+          const target = ball.vx < 0 ? paddles[0] : paddles[1];
+          const contactX = target.side === 'left'
+            ? target.x + target.w + ball.radius
+            : target.x - ball.radius;
+          const crossedPlatform = target.side === 'left'
+            ? previousX > contactX && ball.x <= contactX
+            : previousX < contactX && ball.x >= contactX;
+
+          if (crossedPlatform) {
+            const safeOffset = target.h / 2 - ball.radius - 0.25;
+            const travelled = (contactX - previousX) / (ball.x - previousX);
+            const pathYAtContact = previousPathY + (ball.pathY - previousPathY) * travelled;
+            ball.x = target.side === 'left' ? contactX - 0.2 : contactX + 0.2;
+            ball.y = clamp(foldPathY(pathYAtContact), target.y - safeOffset, target.y + safeOffset);
+            ball.pathY = ball.y;
+            resolvePaddleCollision(ball, target);
+          }
+
+          ball.trail.push({ x: ball.x, y: ball.y });
+          if (ball.trail.length > 6) ball.trail.shift();
+        }
+
+        function drawPaddle(paddle) {
+          ctx.save();
+          ctx.fillStyle = '#f2ead7';
+          ctx.shadowColor = 'rgb(224 189 107 / 58%)';
+          ctx.shadowBlur = 12;
+          ctx.fillRect(paddle.x, paddle.y - paddle.h / 2, paddle.w, paddle.h);
+          ctx.fillStyle = '#d8af5d';
+          ctx.fillRect(paddle.x + 2, paddle.y - paddle.h / 2 + 3, 2, paddle.h - 6);
+          ctx.restore();
+        }
+
+        function drawBall(ball) {
+          const trailLength = ball.trail.length;
+          for (let i = 0; i < trailLength; i += 1) {
+            const point = ball.trail[i];
+            ctx.globalAlpha = ((i + 1) / trailLength) * 0.22;
+            ctx.fillStyle = ball.color;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, ball.radius * (0.45 + i / trailLength * 0.35), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = ball.color;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        function render() {
+          ctx.clearRect(0, 0, W, H);
+          ctx.fillStyle = '#15130f';
+          ctx.fillRect(0, 0, W, H);
+
+          ctx.strokeStyle = 'rgb(223 192 125 / 34%)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, TOP);
+          ctx.lineTo(W, TOP);
+          ctx.moveTo(0, BOTTOM);
+          ctx.lineTo(W, BOTTOM);
+          ctx.stroke();
+
+          paddles.forEach(drawPaddle);
+          balls.forEach(drawBall);
+          ctx.globalAlpha = 1;
+        }
+
+        function updateCounter() {
+          counter.textContent = balls.length.toLocaleString('en-US');
+        }
+
+        function frame(now) {
+          const realDt = Math.min(0.04, (now - lastFrame) / 1000);
+          lastFrame = now;
+          if (running) {
+            const dt = realDt * Number(speedControl.value);
+            elapsed += dt;
+            updatePaddles(dt);
+            const currentCount = balls.length;
+            for (let i = 0; i < currentCount; i += 1) updateBall(balls[i], dt);
+            updateCounter();
+          }
+          render();
+          requestAnimationFrame(frame);
+        }
+
+        pauseButton.addEventListener('click', () => {
+          running = !running;
+          pauseButton.textContent = running ? 'Pause' : 'Resume';
+        });
+        resetButton.addEventListener('click', reset);
+
+        reset();
+        requestAnimationFrame(frame);
+      })();
+    </script>
+  </body>
+</html>
